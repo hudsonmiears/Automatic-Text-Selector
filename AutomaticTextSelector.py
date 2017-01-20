@@ -93,6 +93,17 @@ def getDiphones(englishPhones):
             else:
                 diphoneDict[diphone] = 1
 
+# get the total number of each diphone in the diphoneDict.
+def getDiphoneWeights(pronDict):
+    for word in pronDict:
+        for phone in pronDict[word]:
+            pos = pronDict[word].index(phone)
+            try:
+                diphone = (pronDict[word][pos], pronDict[word][pos + 1])
+                diphoneDict[diphone] += 1
+            except IndexError:
+                pass
+
 
 # give each word a weight which is the sum of all phonemes' weights within that word
 def getWordWeights(pronDict):
@@ -101,6 +112,19 @@ def getWordWeights(pronDict):
         for phone in pronDict[word]:
             weightsum += weightDict[phone]
         wordWeightDict[word] = weightsum
+
+def getWordWeightsDiphones(pronDict):
+    for word in pronDict:
+        weightsum = 0
+        for phone in pronDict[word]:
+            pos = pronDict[word].index(phone)
+            try:
+                diphone = (pronDict[word][pos], pronDict[word][pos + 1])
+                weightsum += diphoneDict[diphone]
+            except IndexError:
+                pass
+        wordWeightDict[word] = weightsum
+
 
 # give each sentence a final weight. The weight is a sum of its words' weights, divided by the length of the sentence.
 # Pass if the word is not in nltk's dictionary.
@@ -119,6 +143,18 @@ def getSentenceWeight(sentenceList):
         sentenceWeight[sentence] = sentsum
 
 
+#####
+#
+# All of these should be run in this order to create a list of sentences sorted by score.
+# To base the word weights on single phonemes, use getWordWeights.
+# To base the word weights on diphones, use getWordWeightsDiphones.
+# Do not use both getwWordWeights and getWordWeightsDiphones.
+# NB: This script scores based on the most common phonemes/diphones in the text you supply. It is not representative of
+# all English phoneme/diphone occurrences, nor does it take into account all English words. As such, this is a domain-
+# specific tool.
+#
+#####
+
 getWordsFromText(sentenceList)
 unCapitalize(wordDict)
 createProns(pronDict)
@@ -126,7 +162,9 @@ stripPhones(pronDict)
 getPhoneWeights(barephonelist)
 getEnglishPhones(weightDict)
 getDiphones(englishPhones)
-getWordWeights(pronDict)
+getDiphoneWeights(pronDict)
+# getWordWeights(pronDict)
+getWordWeightsDiphones(pronDict)
 getSentenceWeight(sentenceList)
 
 
