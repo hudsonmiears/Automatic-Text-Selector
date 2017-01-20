@@ -4,6 +4,9 @@ import re
 reload(sys)
 sys.setdefaultencoding('utf-8')
 
+# Replace with your own text. Note: If using nltk corpora, set openfile to eg. nltk.corpus.gutenberg.raw('file.txt')
+# and also replace line 28 with
+# data = openfile
 openfile = open("DanceDomainText.txt")
 
 arpabet = nltk.corpus.cmudict.dict()
@@ -151,7 +154,8 @@ def getSentenceWeight(sentenceList):
 # Do not use both getwWordWeights and getWordWeightsDiphones.
 # NB: This script scores based on the most common phonemes/diphones in the text you supply. It is not representative of
 # all English phoneme/diphone occurrences, nor does it take into account all English words. As such, this is a domain-
-# specific tool.
+# specific tool. Hypothetically, if run on a very large and English-representative corpus, it would be more representative
+# of the language's features.
 #
 #####
 
