@@ -1,13 +1,17 @@
 import nltk
 import sys
+import operator
+import os
 import re
 reload(sys)
-sys.setdefaultencoding('utf-8')
+# sys.setdefaultencoding('utf-8')
 
 # Replace with your own text. Note: If using nltk corpora, set openfile to eg. nltk.corpus.gutenberg.raw('file.txt')
 # and also replace line 28 with
 # data = openfile
-openfile = open("DanceDomainText.txt")
+openfile = open("wikifile.txt")
+
+
 
 arpabet = nltk.corpus.cmudict.dict()
 weightDict = {}
@@ -16,16 +20,20 @@ countDict = {}
 wordDict = {}
 wordWeightDict = {}
 diphoneDict = {}
+diphoneDictRare = {}
 sentenceWeight = {}
 words = []
 lowered = []
 barephonelist = []
 englishPhones = []
+outputlist = []
 nums = ['0', '1', '2']
+probability = 0
 
 #convert text to sentences
 tokenizer = nltk.data.load('tokenizers/punkt/english.pickle')
 data=openfile.read()
+data = unicode(data, errors='replace')
 
 sentenceList = tokenizer.tokenize(data)
 
@@ -107,6 +115,73 @@ def getDiphoneWeights(pronDict):
             except IndexError:
                 pass
 
+# Give each diphone a weight between 0 and 1, such that rarer diphones have higher weights. This will allow for a wider
+# range of diphones in the final output sentence list. Append to diphoneDictRare.
+def decayWeights(diphoneDict):
+    sorted_dict = sorted(diphoneDict.items(), key=operator.itemgetter(1), reverse=True)
+    newRange = float(1 - 0)
+    oldMin = 0
+    oldMax = len(sorted_dict)
+    oldRange = float(len(sorted_dict) - 0)
+    scaleFactor = newRange / oldRange
+    newList = []
+    for oldValue in sorted_dict:
+        newValue = ((sorted_dict.index(oldValue) - oldMin) * scaleFactor) + 0
+        newList.append((oldValue, newValue))
+
+    for i in newList:
+        diphone = i[0][0]
+        diphoneRareWeight = i[1]
+
+        diphoneDictRare[diphone] = (diphoneDict[diphone], diphoneRareWeight)
+
+def getSentenceWeightRare(pronDict, sentenceList):
+    # inputList = [sentence for sentence in sentenceList if sentence not in outputlist]
+    # try:
+    #     sentenceList.remove([x for x in sentenceList if x in outputlist])
+    # except ValueError:
+    #     pass
+    for sentence in sentenceList:
+        # print sentence
+        words = nltk.word_tokenize(sentence)
+        wordsum = 0.
+        sentsum = 0.
+        diphoneWeight = 0.
+        diphone = ""
+        for word in words:
+            try:
+                small = word.lower()
+                for phone in pronDict[word]:
+                    pos = pronDict[word].index(phone)
+                    try:
+                        diphone = (pronDict[word][pos], pronDict[word][pos + 1])
+                        diphoneWeight = diphoneDictRare[diphone][0]
+                        diphoneMultiplier = diphoneDictRare[diphone][1]
+                        diphoneWeight *= diphoneMultiplier
+                        wordsum += diphoneWeight
+                        diphoneDictRare[diphone] = (diphoneWeight/2,diphoneMultiplier/2)
+                        # print word + str(pronDict[word])
+                        # print diphone
+                        # # print diphoneWeight
+                        # print "wordsum: " + str(wordsum)
+                    except IndexError:
+                        sentsum += wordsum
+                        wordsum = 0
+                        continue
+            except KeyError:
+                pass
+        newsentsum = sentsum / len(sentence)
+        # print "sentsum: " + str(sentsum)
+        # print "newsentsum: " + str(newsentsum)
+        if len(sentence) <= 75:
+            sentenceWeight[sentence] = newsentsum
+        else:
+            sentenceWeight[sentence] = 0
+    dictList = sorted(sentenceWeight.items(), key=lambda x: x[1], reverse=True)
+    outputlist.append(dictList[0:600])
+    # print sentenceList
+    # print dictList
+
 
 # give each word a weight which is the sum of all phonemes' weights within that word
 def getWordWeights(pronDict):
@@ -146,6 +221,9 @@ def getSentenceWeight(sentenceList):
         sentenceWeight[sentence] = sentsum
 
 
+
+
+
 #####
 #
 # All of these should be run in this order to create a list of sentences sorted by score.
@@ -167,12 +245,17 @@ getPhoneWeights(barephonelist)
 getEnglishPhones(weightDict)
 getDiphones(englishPhones)
 getDiphoneWeights(pronDict)
+decayWeights(diphoneDict)
+
+getSentenceWeightRare(pronDict,sentenceList)
+print outputlist
+print sentenceList
 # getWordWeights(pronDict)
-getWordWeightsDiphones(pronDict)
-getSentenceWeight(sentenceList)
+# getWordWeightsDiphones(pronDict)
+# getSentenceWeight(sentenceList)
 
 
-with open('DanceDomainSentences.txt', 'w') as f:
+with open('wikiout.txt', 'a+') as f:
     sortedsw = sorted(sentenceWeight.items(), key=lambda x: x[1], reverse=True)
-    for i in sortedsw:
-        f.write(str(i) + "\n")
+    for i in outputlist:
+        f.write(str(i) + os.linesep)
